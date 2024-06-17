@@ -6,7 +6,7 @@ import type { IWindParameters,
     THoopLayer,
     TSkipLayer
 } from './types';
-import { ECoordinateAxes } from './types';
+import { ECoordinateAxes, AxisLookup } from '../types';
 import { ELayerType } from './types';
 import { WinderMachine } from './machine';
 import { radToDeg, degToRad } from '../helpers'; 
@@ -20,7 +20,7 @@ export function planWind(windingParameters: IWindParameters): string[] {
         tow: windingParameters.towParameters
     }
     machine.insertComment(`Parameters ${JSON.stringify(headerParameters)}`);
-    machine.addRawGCode('G0 X0 Y0 Z0');
+    machine.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.CARRIAGE]}0 ${AxisLookup[ECoordinateAxes.MANDREL]}0 ${AxisLookup[ECoordinateAxes.DELIVERY_HEAD]}0`);
     machine.setFeedRate(windingParameters.defaultFeedRate);
     // TODO: Run other setup stuff
 

@@ -1,4 +1,4 @@
-import { TCoordinate, ECoordinateAxes, AxisLookup, TCoordinateAxes } from './types';
+import { TCoordinate, ECoordinateAxes, AxisLookup, TCoordinateAxes } from '../types';
 import { stripPrecision } from '../helpers';
 
 // Abstracts generating GCode while performing boundary checking, etc
@@ -14,7 +14,7 @@ export class WinderMachine {
     private mandrelDiameter: number;
 
     constructor(mandrelDiameter: number) {
-        this.lastPosition = {[ECoordinateAxes.CARRIAGE]: 0, [ECoordinateAxes.MANDREL]: 0, [ECoordinateAxes.DELIVERY_HEAD]: 0}
+        this.lastPosition = {[ECoordinateAxes.CARRIAGE]: 0, [ECoordinateAxes.MANDREL]: 0, [ECoordinateAxes.DELIVERY_HEAD]: 0, [ECoordinateAxes.IN_OUT]: 0}
         this.mandrelDiameter = mandrelDiameter;
     }
 

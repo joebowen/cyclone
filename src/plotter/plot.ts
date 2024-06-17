@@ -1,8 +1,9 @@
 import { createCanvas, loadImage } from 'canvas';
 import { Readable } from 'stream';
 import { ICoordinate2D } from './types'
+import { IMandrelParameters, ITowParameters } from '../planner/types'
 import { generateCoordinates } from './helpers';
-import { IMandrelParameters, ITowParameters } from '../planner/types';
+import { AxisLookup, ECoordinateAxes, TCoordinateAxes } from '../types';
 
 interface IWindParameters {
     mandrel: IMandrelParameters;
@@ -45,10 +46,10 @@ export function plotGCode(gcode: string[]): Readable | void {
         let nextXCoord = xCoord;
         let nextYCoord = yCoord;
         for (const coordinate of lineParts.slice(1)) {
-            if (coordinate[0] === 'X') {
+            if (coordinate[0] === AxisLookup[ECoordinateAxes.CARRIAGE]) {
                 nextXCoord = Number.parseFloat(coordinate.slice(1));
             }
-            if (coordinate[0] === 'Y') {
+            if (coordinate[0] === AxisLookup[ECoordinateAxes.MANDREL]) {
                 nextYCoord = Number.parseFloat(coordinate.slice(1));
             }
         }
