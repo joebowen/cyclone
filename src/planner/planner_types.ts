@@ -5,6 +5,7 @@
 export interface IMandrelParameters {
     diameter: number;
     windLength: number;
+    polyline: [number, number][];
 }
 
 export interface ITowParameters {
@@ -19,7 +20,8 @@ export interface ITowParameters {
 export const enum ELayerType {
     HOOP = 'hoop',
     HELICAL = 'helical',
-    SKIP = 'skip'
+    SKIP = 'skip',
+    GEODESIC = 'geodesic'
 }
 
 export type THoopLayer = {
@@ -43,7 +45,13 @@ export type TSkipLayer = {
     mandrelRotation: number;
 }
 
-export type TLayerParameters = THoopLayer | THelicalLayer | TSkipLayer;
+export type TGeodesicLayer = {
+    windType: ELayerType.GEODESIC;
+    numPoints: number;
+    numTurns: number;
+}
+
+export type TLayerParameters = THoopLayer | THelicalLayer | TSkipLayer | TGeodesicLayer;
 
 export interface ILayerParameters<TLayerSpecificParameters extends TLayerParameters> {
     parameters: TLayerSpecificParameters;
@@ -61,5 +69,3 @@ export interface IWindParameters {
     towParameters: ITowParameters;
     defaultFeedRate: number;
 }
-
-

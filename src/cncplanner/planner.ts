@@ -1,17 +1,6 @@
-import { WinderMachine } from '../planner/machine';
-import { ECoordinateAxes, AxisLookup } from '../types';
-
-interface IMachiningParameters {
-    initialDiameter: number;
-    targetDiameter: number;
-    toolDiameter: number;
-    toolEngagement: number;
-    feedRate: number;
-    spindleSpeed: number;
-    cutLength: number;
-    stepDown: number;
-    safeHeight: number;
-}
+import { WinderMachine } from '../machine';
+import { ECoordinateAxes, AxisLookup, TCommand, EMoveTypes } from '../global_types';
+import { IMachiningParameters } from './types';
 
 export class CNCMachine extends WinderMachine {
     constructor(public parameters: IMachiningParameters) {
@@ -30,30 +19,31 @@ export class CNCMachine extends WinderMachine {
         this.addRawGCode(`G54 ; Use G54 coordinate system`);
         this.addRawGCode(`S${spindleSpeed} ; Set spindle speed in rpm`);
         this.addRawGCode(`M3 ; Start spindle`);
-        this.addRawGCode(`M8 ; Start dust collection`);
+        this.addRawGCode(`M10 ; Start dust collection`);
+        this.setFeedRate(feedRate);
 
-        this.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.IN_OUT]}${safeHeight}`);
-        this.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.CARRIAGE]}0 ${AxisLookup[ECoordinateAxes.MANDREL]}0`);
+        this.move({ [ECoordinateAxes.IN_OUT]: safeHeight }, EMoveTypes.RAPID);
+        this.move({ [ECoordinateAxes.CARRIAGE]: 0, [ECoordinateAxes.MANDREL]: 0 }, EMoveTypes.RAPID);
 
         for (let passNum = 0; passNum < passes; passNum++) {
             const inOutPosition = (initialDiameter / 2) - (stepDown * (passNum + 1));
-            this.addRawGCode(`G01 ${AxisLookup[ECoordinateAxes.IN_OUT]}${inOutPosition}`);
+            this.move({ [ECoordinateAxes.IN_OUT]: inOutPosition }, EMoveTypes.LINEAR);
 
             for (let rotation = 0; rotation < rotations; rotation++) {
                 const mandrelDegrees = (rotation + 1) * 360;
                 const carriagePos = (rotation + 1) * stepOver;
-                this.addRawGCode(`G01 ${AxisLookup[ECoordinateAxes.MANDREL]}${mandrelDegrees} ${AxisLookup[ECoordinateAxes.CARRIAGE]}${carriagePos} F${feedRate}`);
+                this.move({ [ECoordinateAxes.MANDREL]: mandrelDegrees, [ECoordinateAxes.CARRIAGE]: carriagePos }, EMoveTypes.LINEAR);
             }
 
-            this.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.IN_OUT]}${safeHeight}`);  // Lift the tool to safe height before moving carriage
-            this.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.MANDREL]}0 ${AxisLookup[ECoordinateAxes.CARRIAGE]}0`);
+            this.move({ [ECoordinateAxes.IN_OUT]: safeHeight }, EMoveTypes.RAPID);  // Lift the tool to safe height before moving carriage
+            this.move({ [ECoordinateAxes.CARRIAGE]: 0 }, EMoveTypes.RAPID);
+            this.setPosition({ [ECoordinateAxes.MANDREL]: 0 });
         }
 
-        this.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.IN_OUT]}${safeHeight}`);
-        this.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.CARRIAGE]}0 ${AxisLookup[ECoordinateAxes.MANDREL]}0`);
+        this.move({ [ECoordinateAxes.IN_OUT]: safeHeight }, EMoveTypes.RAPID);
+        this.move({ [ECoordinateAxes.CARRIAGE]: 0, [ECoordinateAxes.MANDREL]: 0 }, EMoveTypes.RAPID);
 
-
-        this.addRawGCode(`M9 ; Stop dust collection`);
+        this.addRawGCode(`M11 ; Stop dust collection`);
         this.addRawGCode(`M5 ; Stop spindle`);
         this.addRawGCode(`M30 ; Stop program`);
 

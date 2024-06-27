@@ -1,9 +1,9 @@
 import { createCanvas, loadImage } from 'canvas';
 import { Readable } from 'stream';
 import { ICoordinate2D } from './types'
-import { IMandrelParameters, ITowParameters } from '../planner/types'
+import { IMandrelParameters, ITowParameters } from '../planner/planner_types'
 import { generateCoordinates } from './helpers';
-import { AxisLookup, ECoordinateAxes, TCoordinateAxes } from '../types';
+import { AxisLookup, ECoordinateAxes, TCoordinateAxes } from '../global_types';
 
 interface IWindParameters {
     mandrel: IMandrelParameters;
