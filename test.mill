@@ -1,0 +1,11 @@
+{
+    "initialDiameter": 150,
+    "targetDiameter": 130,
+    "toolDiameter": 6.35,
+    "toolEngagement": 0.8,
+    "feedRate": 5000,
+    "spindleSpeed": 12000,
+    "cutLength": 1900,
+    "stepDown": 10,
+    "safeHeight": 320
+}

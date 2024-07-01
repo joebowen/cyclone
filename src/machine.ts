@@ -1,5 +1,5 @@
-import { TCoordinate, ECoordinateAxes, AxisLookup, TCoordinateAxes } from './types';
-import { stripPrecision } from '../helpers';
+import { TCoordinate, ECoordinateAxes, AxisLookup, TCoordinateAxes, TCommand, MoveLookup, EMoveTypes } from './global_types';
+import { stripPrecision } from './helpers';
 
 // Abstracts generating GCode while performing boundary checking, etc
 export class WinderMachine {
@@ -14,7 +14,12 @@ export class WinderMachine {
     private mandrelDiameter: number;
 
     constructor(mandrelDiameter: number) {
-        this.lastPosition = {[ECoordinateAxes.CARRIAGE]: 0, [ECoordinateAxes.MANDREL]: 0, [ECoordinateAxes.DELIVERY_HEAD]: 0}
+        this.lastPosition = {
+            [ECoordinateAxes.CARRIAGE]: 0,
+            [ECoordinateAxes.MANDREL]: 0,
+            [ECoordinateAxes.DELIVERY_HEAD]: 0,
+            [ECoordinateAxes.IN_OUT]: 0
+        };
         this.mandrelDiameter = mandrelDiameter;
     }
 
@@ -28,19 +33,19 @@ export class WinderMachine {
 
     public setFeedRate(feedRateMMpM: number): void {
         this.feedRateMMpM = feedRateMMpM;
-        this.gcode.push(`G0 F${stripPrecision(feedRateMMpM)}`);
+        this.gcode.push(`G1 F${stripPrecision(feedRateMMpM)}`);
     }
 
-    public move(position: TCoordinate): void {
+    public move(position: TCoordinate, command: TCommand = EMoveTypes.LINEAR): void {
         // Distance of the move in "Marlin Units", used for time profiling
-        //  Treats mandrel degrees as MM and accounts for delivery head movements, because that's what marlin does
+        // Treats mandrel degrees as MM and accounts for delivery head movements, because that's what marlin does
         let totalDistanceMarlinUnitsSq = 0;
         // Total distance of the move in actual MM, taking into account mandrel diameter and ignoring delivery head
         let towLengthMMSq = 0;
-        let command = 'G0';
+        let gcodeCommand = MoveLookup[command];
         for (const axis in position) {
             const rawAxis = AxisLookup[axis as ECoordinateAxes];
-            command += ` ${rawAxis}${stripPrecision(position[axis as ECoordinateAxes])}`;
+            gcodeCommand += ` ${rawAxis}${stripPrecision(position[axis as ECoordinateAxes])}`;
 
             // Everything in this loop below here is just for the profiler
 
@@ -64,8 +69,9 @@ export class WinderMachine {
                     break;
                 }
                 case ECoordinateAxes.DELIVERY_HEAD:
+                case ECoordinateAxes.IN_OUT:
                 default: {
-                    // Do not add delivery head movement onto the tow length because moving it doesn't unspool more
+                    // Do not add in/out and delivery head movement onto the tow length because moving it doesn't unspool more
                     break;
                 }
             }
@@ -77,7 +83,7 @@ export class WinderMachine {
         this.totalTimeS += totalDistanceMarlinUnitsSq ** 0.5 / this.feedRateMMpM * 60;
         this.totalTowLengthMM += towLengthMMSq ** 0.5;
 
-        this.gcode.push(command);
+        this.gcode.push(gcodeCommand);
     }
 
     public setPosition(position: TCoordinate): void {

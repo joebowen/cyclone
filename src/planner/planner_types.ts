@@ -5,6 +5,7 @@
 export interface IMandrelParameters {
     diameter: number;
     windLength: number;
+    polyline: [number, number][];
 }
 
 export interface ITowParameters {
@@ -19,7 +20,8 @@ export interface ITowParameters {
 export const enum ELayerType {
     HOOP = 'hoop',
     HELICAL = 'helical',
-    SKIP = 'skip'
+    SKIP = 'skip',
+    GEODESIC = 'geodesic'
 }
 
 export type THoopLayer = {
@@ -43,7 +45,13 @@ export type TSkipLayer = {
     mandrelRotation: number;
 }
 
-export type TLayerParameters = THoopLayer | THelicalLayer | TSkipLayer;
+export type TGeodesicLayer = {
+    windType: ELayerType.GEODESIC;
+    numPoints: number;
+    numTurns: number;
+}
+
+export type TLayerParameters = THoopLayer | THelicalLayer | TSkipLayer | TGeodesicLayer;
 
 export interface ILayerParameters<TLayerSpecificParameters extends TLayerParameters> {
     parameters: TLayerSpecificParameters;
@@ -60,27 +68,4 @@ export interface IWindParameters {
     mandrelParameters: IMandrelParameters;
     towParameters: ITowParameters;
     defaultFeedRate: number;
-}
-
-
-/**
- *  Helpers types
- */
-
-export const enum ECoordinateAxes {
-    CARRIAGE = 'carriage',
-    MANDREL = 'mandrel',
-    DELIVERY_HEAD = 'deliveryHead'
-}
-
-export type TCoordinateAxes = Record<ECoordinateAxes, number>;
-
-export type AtLeastOne<T, U = {[K in keyof T]: Pick<T, K> }> = Partial<T> & U[keyof U];
-
-export type TCoordinate = AtLeastOne<TCoordinateAxes>;
-
-export const AxisLookup: Record<keyof TCoordinateAxes, string> = {
-    [ECoordinateAxes.CARRIAGE]: 'X',
-    [ECoordinateAxes.MANDREL]: 'Y',
-    [ECoordinateAxes.DELIVERY_HEAD]: 'Z'
 }
