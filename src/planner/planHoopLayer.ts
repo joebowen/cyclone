@@ -1,6 +1,6 @@
 import type { ILayerParameters, THoopLayer } from './planner_types';
 import { WinderMachine } from '../machine';
-import { ECoordinateAxes } from '../global_types';
+import { ECoordinateAxes, EMoveTypes } from '../global_types';
 import { radToDeg } from './helpers';
 
 export function planHoopLayer(machine: WinderMachine, layerParameters: ILayerParameters<THoopLayer>): void {

@@ -6,7 +6,10 @@ export interface IMandrelParameters {
     diameter: number;
     windLength: number;
     polyline: [number, number][];
+    globalToolOffset?: number;
+    safeToolOffset?: number;
 }
+
 
 export interface ITowParameters {
     width: number;
@@ -27,7 +30,8 @@ export const enum ELayerType {
 export type THoopLayer = {
     windType: ELayerType.HOOP;
     terminal: boolean; // Is this a one-way hoop layer, or are there other layers afterwards?
-}
+    layerToolOffset?: number; // Layer Tool offset in the In/Out direction in addition to the the globalToolOffset
+};
 
 export type THelicalLayer = {
     windType: ELayerType.HELICAL;
@@ -38,17 +42,20 @@ export type THelicalLayer = {
     leadInMM: number; // The portion of the pass on each end during which the delivery head rotates into place
     leadOutDegrees: number; // The portion of each lock that the delivery head rotates back to level during
     skipInitialNearLock: boolean | undefined; // For sequences of multiple helical layers, skip the extra near lock
+    layerToolOffset?: number; // Layer Tool offset in the In/Out direction in addition to the the globalToolOffset
 }
 
 export type TSkipLayer = {
     windType: ELayerType.SKIP;
     mandrelRotation: number;
+    layerToolOffset?: number; // Layer Tool offset in the In/Out direction in addition to the the globalToolOffset
 }
 
 export type TGeodesicLayer = {
     windType: ELayerType.GEODESIC;
     numPoints: number;
     numTurns: number;
+    layerToolOffset?: number; // Layer Tool offset in the In/Out direction in addition to the the globalToolOffset
 }
 
 export type TLayerParameters = THoopLayer | THelicalLayer | TSkipLayer | TGeodesicLayer;

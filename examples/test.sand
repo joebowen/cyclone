@@ -2,11 +2,19 @@
     "layers": [
         {
             "windType": "hoop",
+            "layerToolOffset": 0,
+            "terminal": false
+        },
+        {
+            "windType": "hoop",
+            "layerToolOffset": -0.1,
             "terminal": true
         }
     ],
     "mandrelParameters": {
         "diameter": 130,
+        "globalToolOffset": 0,
+        "safeToolOffset": 10,
         "windLength": 250
     },
     "towParameters": {

@@ -1,5 +1,5 @@
 import { IWindParameters, ILayerParameters, TGeodesicLayer, THelicalLayer, THoopLayer, TSkipLayer, ELayerType } from './planner_types';
-import { ECoordinateAxes, AxisLookup } from '../global_types';
+import { ECoordinateAxes, AxisLookup, EMoveTypes } from '../global_types';
 import { WinderMachine } from '../machine';
 import { planGeodesicWind } from './planGeodesicWind';
 import { planHelicalLayer } from './planHelicalLayer';
@@ -13,7 +13,13 @@ export function planWind(windingParameters: IWindParameters): string[] {
         mandrel: windingParameters.mandrelParameters,
         tow: windingParameters.towParameters
     };
+
     machine.insertComment(`Parameters ${JSON.stringify(headerParameters)}`);
+
+    const safeInOutPosition = (windingParameters.mandrelParameters.diameter / 2) + windingParameters.mandrelParameters.safeToolOffset;
+    const globalInOutPosition = (windingParameters.mandrelParameters.diameter / 2) + windingParameters.mandrelParameters.globalToolOffset;
+
+    machine.move({ [ECoordinateAxes.IN_OUT]: safeInOutPosition }, EMoveTypes.RAPID);
     machine.addRawGCode(`G0 ${AxisLookup[ECoordinateAxes.CARRIAGE]}0 ${AxisLookup[ECoordinateAxes.DELIVERY_HEAD]}0`);
 
     machine.setPosition({
@@ -36,6 +42,14 @@ export function planWind(windingParameters: IWindParameters): string[] {
         const layerComment = `Layer ${layerIndex + 1} of ${windingParameters.layers.length}: ${layer.windType}`;
         console.log(layerComment);
         machine.insertComment(layerComment);
+
+        machine.insertComment(`Parameters ${JSON.stringify(layer)}`);
+
+        const layerToolOffset = layer.layerToolOffset ?? 0;
+
+        const layerInOutPosition = globalInOutPosition + layerToolOffset;
+        machine.move({ [ECoordinateAxes.IN_OUT]: layerInOutPosition }, EMoveTypes.LINEAR);
+
         switch(layer.windType) {
             case ELayerType.HOOP:
                 planHoopLayer(machine, {
@@ -81,6 +95,8 @@ export function planWind(windingParameters: IWindParameters): string[] {
 
         console.log('-'.repeat(80));
     }
+
+    machine.move({ [ECoordinateAxes.IN_OUT]: safeInOutPosition }, EMoveTypes.RAPID);
 
     console.log(`\nTotal time estimate: ${cumulativeTimeS} seconds`);
     console.log(`Total tow required: ${cumulativeTowUseM} meters\n`);

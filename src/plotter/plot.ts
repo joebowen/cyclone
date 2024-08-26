@@ -12,6 +12,7 @@ interface IWindParameters {
 
 export function plotGCode(gcode: string[]): Readable | void {
     // Look for a header and abort early if we don't find one in the first line
+    console.log(`First gcode line: '${gcode[0]}'`);
     const headerLineParts = gcode[0].split(' ');
     if (!(headerLineParts[0] === ';' && headerLineParts[1] === 'Parameters')) {
         console.log('Did not find header comment in first line');
@@ -38,7 +39,7 @@ export function plotGCode(gcode: string[]): Readable | void {
             continue;
         }
 
-        if (lineParts[0] !== 'G0') {
+        if (lineParts[0] !== 'G0' && lineParts[0] !== 'G1') {
             console.log(`Unknown gcode line: '${line}', skipping`)
             continue;
         }

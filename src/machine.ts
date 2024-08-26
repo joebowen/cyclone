@@ -59,7 +59,7 @@ export class WinderMachine {
             switch (axis) {
                 case ECoordinateAxes.MANDREL: {
                     // Mandrel units are actually degrees, so convert them to arc length
-                    const arcLengthMM = moveComponent / 360 * this.mandrelDiameter * Math.PI;
+                    const arcLengthMM = (moveComponent / 360) * this.mandrelDiameter * Math.PI;
                     towLengthMMSq += arcLengthMM ** 2;
                     break;
                 }
@@ -76,12 +76,17 @@ export class WinderMachine {
                 }
             }
 
+            // Update the last position
             this.lastPosition[axis as ECoordinateAxes] = position[axis as ECoordinateAxes];
         }
 
         // Assumes instantaneous acceleration
-        this.totalTimeS += totalDistanceMarlinUnitsSq ** 0.5 / this.feedRateMMpM * 60;
-        this.totalTowLengthMM += towLengthMMSq ** 0.5;
+        // Ensure total distance is non-negative and feed rate is non-zero
+        const totalDistanceMarlinUnits = Math.sqrt(Math.max(totalDistanceMarlinUnitsSq, 0));
+        const feedRate = this.feedRateMMpM > 0 ? this.feedRateMMpM : 1; // Prevent division by zero
+
+        this.totalTimeS += totalDistanceMarlinUnits / feedRate * 60;
+        this.totalTowLengthMM += Math.sqrt(Math.max(towLengthMMSq, 0));
 
         this.gcode.push(gcodeCommand);
     }

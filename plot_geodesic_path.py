@@ -90,6 +90,8 @@ for i in range(len(geodesic_path)):
     normal = calculate_normal_vector(X[i], Y[i], Z[i], X, Y, Z)
     wind_angle_vector = calculate_wind_angle_vector(tangent, normal)
 
+    print(wind_angle_vector)
+
     ax.quiver(X[i], Y[i], Z[i], tangent[0], tangent[1], tangent[2], color='b', length=5, normalize=True)
     ax.quiver(X[i], Y[i], Z[i], normal[0], normal[1], normal[2], color='g', length=5, normalize=True)
     ax.quiver(X[i], Y[i], Z[i], wind_angle_vector[0], wind_angle_vector[1], wind_angle_vector[2], color='m', length=5, normalize=True)

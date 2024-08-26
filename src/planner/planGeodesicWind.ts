@@ -5,31 +5,85 @@ import { radToDeg } from './helpers';
 import * as fs from 'fs';
 
 /**
- * Calculates the geodesic path based on the 3D coordinates.
- * @param {number[]} X - X-coordinates.
- * @param {number[]} Y - Y-coordinates.
- * @param {number[]} Z - Z-coordinates.
- * @param {number} numTurns - Number of turns for the geodesic path.
- * @returns {number[][]} - The geodesic path as an array of [x, y, z] points.
+ * Calculate a geodesic path on an arbitrary shape.
+ *
+ * @param {number[]} X - Array of X coordinates of points on the surface.
+ * @param {number[]} Y - Array of Y coordinates of points on the surface.
+ * @param {number[]} Z - Array of Z coordinates of points on the surface.
+ * @param {number} numTurns - Number of complete turns the path should make around the shape.
+ * @returns {number[][]} - Array of [x, y, z] coordinates representing the geodesic path.
  */
 function calculateGeodesicPath(X: number[], Y: number[], Z: number[], numTurns: number): number[][] {
     const geodesicPath: number[][] = [];
-    const numPoints = X.length; // Number of points on the geodesic path
+    const numPoints = X.length;
 
-    // Calculate the length of the polyline (height of the cone)
-    const height = Y[Y.length - 1] - Y[0];
+    if (numPoints < 2) {
+        console.error('Insufficient number of points to calculate the geodesic path.');
+        return geodesicPath;
+    }
 
-    // Parametric equations for a helical geodesic path on a cone
-    for (let i = 0; i < numPoints; i++) {
-        const y = Y[0] + (i / (numPoints - 1)) * height;
-        const radius = interpolateRadius(X, Y, Z, y);
-        const theta = 2 * Math.PI * numTurns * (i / numPoints);
-        const x = radius * Math.cos(theta);
-        const z = radius * Math.sin(theta);
-        geodesicPath.push([x, y, z]);
+    let currentY = Y[0];
+    let currentRadius = Math.sqrt(X[0] ** 2 + Z[0] ** 2);
+    const totalHeight = Y[Y.length - 1] - Y[0];
+    const baseStepSize = totalHeight / (numPoints - 1); // Default step size for height
+
+    geodesicPath.push([X[0], currentY, Z[0]]);
+
+    // Calculate the geodesic path
+    for (let i = 1; i < numPoints; i++) {
+        const ds = baseStepSize; // Arc length step
+        const nextRadius = interpolateRadius(X, Y, Z, currentY + ds);
+        const dr = nextRadius - currentRadius;
+
+        let dy;
+        if (Math.abs(dr) > 1e-6) { // Region 1: Changing Radius
+            dy = Math.sqrt(ds * ds - dr * dr); // Ensure ds^2 = dr^2 + dy^2
+        } else { // Region 2: Constant Radius
+            dy = ds; // Simple step in height when radius is constant
+        }
+
+        currentY += dy;
+        currentRadius = nextRadius;
+
+        const theta = 2 * Math.PI * numTurns * (i / (numPoints - 1));
+        const x = currentRadius * Math.cos(theta);
+        const z = currentRadius * Math.sin(theta);
+
+        geodesicPath.push([x, currentY, z]);
     }
 
     return geodesicPath;
+}
+
+/**
+ * Interpolates the radius at a given Y value based on the input points.
+ *
+ * @param {number[]} X - Array of X coordinates of points on the surface.
+ * @param {number[]} Y - Array of Y coordinates of points on the surface.
+ * @param {number[]} Z - Array of Z coordinates of points on the surface.
+ * @param {number} y - The Y coordinate at which to interpolate the radius.
+ * @returns {number} - The interpolated radius at the given Y coordinate.
+ */
+function interpolateRadius(X: number[], Y: number[], Z: number[], y: number): number {
+    if (y <= Y[0]) {
+        return Math.sqrt(X[0] ** 2 + Z[0] ** 2);
+    }
+
+    if (y >= Y[Y.length - 1]) {
+        return Math.sqrt(X[X.length - 1] ** 2 + Z[Z.length - 1] ** 2);
+    }
+
+    for (let i = 0; i < Y.length - 1; i++) {
+        if (Y[i] <= y && y <= Y[i + 1]) {
+            const t = (y - Y[i]) / (Y[i + 1] - Y[i]);
+            const radius = Math.sqrt(X[i] ** 2 + Z[i] ** 2);
+            const nextRadius = Math.sqrt(X[i + 1] ** 2 + Z[i + 1] ** 2);
+            return radius + t * (nextRadius - radius);
+        }
+    }
+
+    console.error(`Failed to interpolate radius for y = ${y}`);
+    return NaN;
 }
 
 // Export the geodesic path to a JSON file
@@ -56,6 +110,9 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
 
     console.log('Revolved 3D Coordinates:', { X, Y, Z });
 
+    // Export the coordinates path to a JSON file
+    exportCoordinates(X, Y, Z);
+
     // Example geodesic winding path calculation
     const geodesicPath = calculateGeodesicPath(X, Y, Z, numTurns);
 
@@ -77,33 +134,10 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
             [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],                             // Carriage-axis movement
             [ECoordinateAxes.MANDREL]: mandrelRotation,                                 // Mandrel-axis rotation
             [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]),   // In/Out-axis delivery head in/out movement
-            [ECoordinateAxes.DELIVERY_HEAD]: windAngleVector[1]                         // Delivery head rotation
+            [ECoordinateAxes.DELIVERY_HEAD]: tangent[1]                                 // Delivery head rotation
         });
     }
     machine.zeroAxes(geodesicPath[geodesicPath.length - 1][1]);
-}
-
-function interpolateRadius(X: number[], Y: number[], Z: number[], y: number): number {
-    if (y <= Y[0]) {
-        return Math.sqrt(X[0] ** 2 + Z[0] ** 2);
-    }
-
-    if (y >= Y[Y.length - 1]) {
-        return Math.sqrt(X[X.length - 1] ** 2 + Z[X.length - 1] ** 2);
-    }
-
-    for (let i = 0; i < Y.length - 1; i++) {
-        if (Y[i] <= y && y <= Y[i + 1]) {
-            const t = (y - Y[i]) / (Y[i + 1] - Y[i]);
-            const radius = Math.sqrt(X[i] ** 2 + Z[i] ** 2);
-            const nextRadius = Math.sqrt(X[i + 1] ** 2 + Z[i + 1] ** 2);
-            const interpolatedRadius = radius + t * (nextRadius - radius);
-            return interpolatedRadius;
-        }
-    }
-
-    console.error('Failed to interpolate radius: y =', y);
-    return NaN;
 }
 
 function calculateNormalVector(x: number, y: number, z: number, X: number[], Y: number[], Z: number[]): [number, number, number] {
@@ -199,7 +233,7 @@ function revolve2DTo3D(polyline: [number, number][], numPoints: number): [number
 
     console.log('Theta:', theta);
 
-    polyline.forEach(([x, y]) => {
+    polyline.forEach(([y, x]) => {
         theta.forEach(t => {
             X.push(x * Math.cos(t)); // X-coordinate revolved
             Y.push(y); // Y-coordinate remains the same

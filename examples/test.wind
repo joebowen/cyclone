@@ -1,28 +1,33 @@
 {
     "layers": [
         {
-            "windType": "hoop",
-            "terminal": false
+            "windType": "helical",
+            "windAngle": 38,
+            "patternNumber": 2,
+            "skipIndex": 1,
+            "layerToolOffset": 5,
+            "lockDegrees": 720,
+            "leadInMM": 30,
+            "leadOutDegrees": 90,
+            "skipInitialNearLock": false
         },
         {
             "windType": "helical",
-            "windAngle": 39,
+            "windAngle": 44,
             "patternNumber": 2,
             "skipIndex": 1,
+            "layerToolOffset": 10,
             "lockDegrees": 720,
             "leadInMM": 30,
             "leadOutDegrees": 90,
             "skipInitialNearLock": true
         },
         {
-            "windType": "hoop",
-            "terminal": false
-        },
-        {
             "windType": "helical",
-            "windAngle": 50,
+            "windAngle": 49,
             "patternNumber": 2,
             "skipIndex": 1,
+            "layerToolOffset": 15,
             "lockDegrees": 720,
             "leadInMM": 30,
             "leadOutDegrees": 90,
@@ -30,12 +35,14 @@
         }
     ],
     "mandrelParameters": {
-        "diameter": 130,
-        "windLength": 200
+        "diameter": 60,
+        "globalToolOffset": 10,
+        "safeToolOffset": 30,
+        "windLength": 500
     },
     "towParameters": {
         "width": 3,
-        "thickness": 0.5
+        "thickness": 0.65
     },
-    "defaultFeedRate": 10000
+    "defaultFeedRate": 6000
 }
