@@ -3,12 +3,14 @@
         {
             "windType": "hoop",
             "layerToolOffset": 0,
-            "terminal": false
+            "terminal": false,
+            "lockDegrees": 180
         },
         {
             "windType": "hoop",
             "layerToolOffset": -0.1,
-            "terminal": true
+            "terminal": true,
+            "lockDegrees": 180
         }
     ],
     "mandrelParameters": {

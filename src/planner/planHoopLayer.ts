@@ -4,7 +4,7 @@ import { ECoordinateAxes, EMoveTypes } from '../global_types';
 import { radToDeg } from './helpers';
 
 export function planHoopLayer(machine: WinderMachine, layerParameters: ILayerParameters<THoopLayer>): void {
-    const lockDegrees = 180;
+    const lockDegrees = layerParameters.parameters.lockDegrees;
     const windAngle = 90 - radToDeg(Math.atan(layerParameters.mandrelParameters.diameter / layerParameters.towParameters.width));
     const mandrelRotatations = layerParameters.mandrelParameters.windLength / layerParameters.towParameters.width;
     const farMandrelPositionDegrees = lockDegrees + (mandrelRotatations * 360);

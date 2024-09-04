@@ -1,0 +1,45 @@
+{
+    "layers": [
+        {
+            "windType": "milling",
+            "layerToolOffset": 0,
+            "initialDiameter": 176,
+            "targetDiameter": 60,
+            "toolDiameter": 6.35,
+            "toolEngagement": 0.8,
+            "feedRate": 1500,
+            "spindleSpeed": 12000,
+            "cutLength": 1830,
+            "maxRoughStepDown": 15,
+            "safeHeight": 95,
+            "finishingStepDown": 1,
+            "finishingFeedRate":1000,
+            "finishingToolEngagement": 0.3
+        }
+    ],
+    "mandrelParameters": {
+        "diameter": 176,
+        "globalToolOffset": 0,
+        "safeToolOffset": 20,
+        "windLength": 500
+    },
+    "towParameters": {
+        "width": 5,
+        "thickness": 0.5
+    },
+    "defaultFeedRate": 8000,
+    "headerGcode": [
+      "G21 ; Set units to mm",
+      "G90 ; Set absolute distance mode",
+      "G54 ; Use G54 coordinate system",
+      "S12000 ; Set spindle speed in rpm",
+      "M3 ; Start spindle",
+      "M10 ; Start dust collection",
+      "G1 F1500"
+    ],
+    "footerGcode": [
+      "M11 ; Stop dust collection",
+      "M5 ; Stop spindle",
+      "M30 ; Stop program"
+    ]
+}

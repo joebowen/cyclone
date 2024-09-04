@@ -1,10 +1,11 @@
-import { IWindParameters, ILayerParameters, TGeodesicLayer, THelicalLayer, THoopLayer, TSkipLayer, ELayerType } from './planner_types';
+import { IWindParameters, ILayerParameters, TMachiningParameters, TGeodesicLayer, THelicalLayer, THoopLayer, TSkipLayer, ELayerType } from './planner_types';
 import { ECoordinateAxes, AxisLookup, EMoveTypes } from '../global_types';
 import { WinderMachine } from '../machine';
 import { planGeodesicWind } from './planGeodesicWind';
 import { planHelicalLayer } from './planHelicalLayer';
 import { planHoopLayer } from './planHoopLayer';
 import { planSkipLayer } from './planSkipLayer';
+import { planMilling } from './planMilling';
 
 export function planWind(windingParameters: IWindParameters): string[] {
     const machine = new WinderMachine(windingParameters.mandrelParameters.diameter);
@@ -15,6 +16,11 @@ export function planWind(windingParameters: IWindParameters): string[] {
     };
 
     machine.insertComment(`Parameters ${JSON.stringify(headerParameters)}`);
+
+    // Add header G-code if provided
+    if (windingParameters.headerGcode) {
+        windingParameters.headerGcode.forEach(line => machine.addRawGCode(line));
+    }
 
     const safeInOutPosition = (windingParameters.mandrelParameters.diameter / 2) + windingParameters.mandrelParameters.safeToolOffset;
     const globalInOutPosition = (windingParameters.mandrelParameters.diameter / 2) + windingParameters.mandrelParameters.globalToolOffset;
@@ -46,12 +52,11 @@ export function planWind(windingParameters: IWindParameters): string[] {
         machine.insertComment(`Parameters ${JSON.stringify(layer)}`);
 
         const layerToolOffset = layer.layerToolOffset ?? 0;
-
         const layerInOutPosition = globalInOutPosition + layerToolOffset;
-        machine.move({ [ECoordinateAxes.IN_OUT]: layerInOutPosition }, EMoveTypes.LINEAR);
 
         switch(layer.windType) {
             case ELayerType.HOOP:
+                machine.move({ [ECoordinateAxes.IN_OUT]: layerInOutPosition }, EMoveTypes.LINEAR);
                 planHoopLayer(machine, {
                     parameters: layer as THoopLayer,
                     mandrelParameters: windingParameters.mandrelParameters,
@@ -61,6 +66,7 @@ export function planWind(windingParameters: IWindParameters): string[] {
                 break;
 
             case ELayerType.HELICAL:
+                machine.move({ [ECoordinateAxes.IN_OUT]: layerInOutPosition }, EMoveTypes.LINEAR);
                 planHelicalLayer(machine, {
                     parameters: layer as THelicalLayer,
                     mandrelParameters: windingParameters.mandrelParameters,
@@ -69,6 +75,7 @@ export function planWind(windingParameters: IWindParameters): string[] {
                 break;
 
             case ELayerType.SKIP:
+                machine.move({ [ECoordinateAxes.IN_OUT]: layerInOutPosition }, EMoveTypes.LINEAR);
                 planSkipLayer(machine, {
                     parameters: layer as TSkipLayer,
                     mandrelParameters: windingParameters.mandrelParameters,
@@ -81,6 +88,12 @@ export function planWind(windingParameters: IWindParameters): string[] {
                     parameters: layer as TGeodesicLayer,
                     mandrelParameters: windingParameters.mandrelParameters,
                     towParameters: windingParameters.towParameters
+                });
+                break;
+
+            case ELayerType.MILLING:
+                planMilling(machine, {
+                    ...layer as TMachiningParameters
                 });
                 break;
         }
@@ -100,6 +113,11 @@ export function planWind(windingParameters: IWindParameters): string[] {
 
     console.log(`\nTotal time estimate: ${cumulativeTimeS} seconds`);
     console.log(`Total tow required: ${cumulativeTowUseM} meters\n`);
+
+    // Add footer G-code if provided
+    if (windingParameters.footerGcode) {
+        windingParameters.footerGcode.forEach(line => machine.addRawGCode(line));
+    }
 
     return machine.getGCode();
 }

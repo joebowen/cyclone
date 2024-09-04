@@ -5,7 +5,6 @@ G92 A0
 G1 F10000
 ; Layer 1 of 1: geodesic
 ; Parameters {"windType":"geodesic","numPoints":10,"layerToolOffset":15,"numTurns":10}
-G1 Z125
 G1 Y0 A0 Z30 X0.25643
 G1 Y0.49554 A400 Z30 X0.256546
 G1 Y0.99108 A800 Z30 X0.256546

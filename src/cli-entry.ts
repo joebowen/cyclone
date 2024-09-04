@@ -1,5 +1,4 @@
 import { MarlinPort } from './marlin-port';
-import { CNCMachine } from './cncplanner';
 import { planWind } from './planner';
 import { plotGCode } from './plotter';
 import { hideBin } from 'yargs/helpers';
@@ -34,26 +33,6 @@ require('yargs').command({
         for (const command of data.toString().trim().split('\n')) {
             marlin.queueCommand(command);
         }
-    }
-})
-.command({
-    command: 'generate-cnc <file>',
-    describe: 'Generate G-code for CNC machining from parameters file',
-    builder: {
-        output: {
-            alias: 'o',
-            describe: 'File to output to',
-            demandOption: true,
-            type: 'string'
-        }
-    },
-    async handler(argv: Record<string, string>): Promise<void> {
-        const fileContents = await fs.readFile(argv.file, "utf-8");
-        const machiningParams = JSON.parse(fileContents);
-        const cncMachine = new CNCMachine(machiningParams);
-        const gCode = cncMachine.generateGCode();
-        await fs.writeFile(argv.output, gCode.join('\n'));
-        console.log(`Wrote ${gCode.length} commands to "${argv.output}"`);
     }
 })
 .command({
