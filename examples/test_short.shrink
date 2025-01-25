@@ -10,8 +10,8 @@
     "mandrelParameters": {
         "diameter": 60,
         "globalToolOffset": 50,
-        "safeToolOffset": 100,
-        "windLength": 1300
+        "safeToolOffset": 60,
+        "windLength": 300
     },
     "towParameters": {
         "width": 10,

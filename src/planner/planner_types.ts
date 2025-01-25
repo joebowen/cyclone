@@ -8,6 +8,8 @@ export interface IMandrelParameters {
     polyline: [number, number][];
     globalToolOffset?: number;
     safeToolOffset?: number;
+    dxfFilePath: string;
+    stlFilePath: string;
 }
 
 
@@ -74,7 +76,14 @@ export type TGeodesicLayer = {
     windType: ELayerType.GEODESIC;
     numPoints: number;
     numTurns: number;
-    layerToolOffset?: number; // Layer Tool offset in the In/Out direction in addition to the the globalToolOffset
+    lockDegrees?: number;
+    leadInMM?: number;
+    leadOutDegrees?: number;
+    leadInDegrees?: number;
+    leadOutMM?: number;
+    layerToolOffset?: number;
+    numLoops?: number;
+    extraRotationDegrees?: number;
 }
 
 export type TLayerParameters = THoopLayer | THelicalLayer | TSkipLayer | TGeodesicLayer | TMachiningParameters;

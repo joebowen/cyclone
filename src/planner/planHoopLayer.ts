@@ -14,7 +14,7 @@ export function planHoopLayer(machine: WinderMachine, layerParameters: ILayerPar
 
     machine.move({
         [ECoordinateAxes.CARRIAGE]: 0,
-        [ECoordinateAxes.MANDREL]: lockDegrees,
+        [ECoordinateAxes.MANDREL]: lockDegrees + machine.getLastPosition()[ECoordinateAxes.MANDREL],
         [ECoordinateAxes.DELIVERY_HEAD]: 0
     });
 
@@ -49,5 +49,5 @@ export function planHoopLayer(machine: WinderMachine, layerParameters: ILayerPar
         [ECoordinateAxes.MANDREL]: nearLockPositionDegrees,
         [ECoordinateAxes.DELIVERY_HEAD]: 0
     });
-    machine.zeroAxes(nearLockPositionDegrees);
+    // machine.zeroAxes(nearLockPositionDegrees);
 }

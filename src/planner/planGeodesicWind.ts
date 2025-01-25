@@ -1,8 +1,10 @@
 import { WinderMachine } from '../machine';
 import { ILayerParameters, TGeodesicLayer } from './planner_types';
 import { ECoordinateAxes } from '../global_types';
-import { radToDeg } from './helpers';
 import * as fs from 'fs';
+const DxfParser = require('dxf-parser');
+import * as THREE from 'three';
+const StlReader = require('stl-reader');
 
 /**
  * Calculate a geodesic path on an arbitrary shape.
@@ -42,7 +44,11 @@ function calculateGeodesicPath(X: number[], Y: number[], Z: number[], numTurns: 
             dy = ds; // Simple step in height when radius is constant
         }
 
-        currentY += dy;
+        currentY += ds;
+        if (isNaN(currentY)) {
+            console.error(`currentY became NaN after incrementing by ds = ${ds}`);
+            break;
+        }
         currentRadius = nextRadius;
 
         const theta = 2 * Math.PI * numTurns * (i / (numPoints - 1));
@@ -65,12 +71,16 @@ function calculateGeodesicPath(X: number[], Y: number[], Z: number[], numTurns: 
  * @returns {number} - The interpolated radius at the given Y coordinate.
  */
 function interpolateRadius(X: number[], Y: number[], Z: number[], y: number): number {
+    if (isNaN(y)) {
+        throw new Error(`Invalid y value: ${y}`);
+    }
+
     if (y <= Y[0]) {
-        return Math.sqrt(X[0] ** 2 + Z[0] ** 2);
+        return Y[0];
     }
 
     if (y >= Y[Y.length - 1]) {
-        return Math.sqrt(X[X.length - 1] ** 2 + Z[Z.length - 1] ** 2);
+        return Y[Y.length - 1];
     }
 
     for (let i = 0; i < Y.length - 1; i++) {
@@ -82,8 +92,7 @@ function interpolateRadius(X: number[], Y: number[], Z: number[], y: number): nu
         }
     }
 
-    console.error(`Failed to interpolate radius for y = ${y}`);
-    return NaN;
+    throw new Error(`Failed to interpolate radius for y = ${y}`);
 }
 
 // Export the geodesic path to a JSON file
@@ -93,22 +102,43 @@ function exportGeodesicPath(geodesicPath: number[][]): void {
 
 // Update the planGeodesicWind function
 export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayerParameters<TGeodesicLayer>): void {
-    const numPoints = layerParameters.parameters.numPoints; // Number of points for smoother geodesic path
-    const numTurns = layerParameters.parameters.numTurns; // Number of turns for the geodesic path
+    const numPoints = layerParameters.parameters.numPoints;
+    const numTurns = layerParameters.parameters.numTurns;
+    const lockDegrees = layerParameters.parameters.lockDegrees || 0;
+    const leadInMM = layerParameters.parameters.leadInMM || 0;
+    const leadInDegrees = layerParameters.parameters.leadInDegrees || 0;
+    const leadOutMM = layerParameters.parameters.leadOutMM || 0;
+    const leadOutDegrees = layerParameters.parameters.leadOutDegrees || 0;
+    const numLoops = layerParameters.parameters.numLoops || 1;
+    const globalToolOffset = layerParameters.mandrelParameters.globalToolOffset;
+    const safeToolOffset = layerParameters.mandrelParameters.safeToolOffset;
+    const layerToolOffset = layerParameters.parameters.layerToolOffset || 0;
 
-    // Log the received layer parameters for debugging
+    const dxfFilePath = layerParameters.mandrelParameters.dxfFilePath || '';
+    const stlFilePath = layerParameters.mandrelParameters.stlFilePath || '';
+
     console.log('Received Layer Parameters:', layerParameters);
+    console.log(`lockDegrees: ${lockDegrees}, leadInMM: ${leadInMM}, leadOutDegrees: ${leadOutDegrees}`);
 
-    // Use the provided polyline from the layer parameters
-    const polyline = layerParameters.mandrelParameters.polyline;
+    let vertices: THREE.Vector3[] = [];
 
-    // Log the polyline to verify it was passed correctly
-    console.log('Received Polyline:', polyline);
+    let X: number[] = [];
+    let Y: number[] = [];
+    let Z: number[] = [];
 
-    // Revolve the polyline to create a 3D shape
-    const [X, Y, Z] = revolve2DTo3D(polyline, numPoints);
+    if (dxfFilePath !== '') {
+        console.log('Processing DXF file:', dxfFilePath);
+        const vertices_backup = extractPointsFromDXF(dxfFilePath);
+        [X, Y, Z] = revolve2DTo3D(vertices_backup, numPoints);
+    } else if (stlFilePath !== '') {
+        console.log('Processing STL file:', stlFilePath);
+        vertices = extractPointsFromSTL(stlFilePath);
+        [X, Y, Z] = verticesToCoordinates(vertices);
+    } else {
+        throw new Error('No valid file path provided for DXF or STL.');
+    }
 
-    console.log('Revolved 3D Coordinates:', { X, Y, Z });
+    console.log('3D Coordinates:', X, Y, Z);
 
     // Export the coordinates path to a JSON file
     exportCoordinates(X, Y, Z);
@@ -121,55 +151,59 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
     // Export the geodesic path to a JSON file
     exportGeodesicPath(geodesicPath);
 
-    // Plot and plan the geodesic winding
-    for (let i = 0; i < geodesicPath.length; i++) {
-        const tangent = calculateTangentVector(geodesicPath, i);
-        const normal = calculateNormalVector(geodesicPath[i][0], geodesicPath[i][1], geodesicPath[i][2], X, Y, Z);
-        const windAngleVector = calculateWindAngleVector(tangent, normal);
+    // Lead-In Winding
+    let cumulativeMandrelRotation = machine.getLastPosition()[ECoordinateAxes.MANDREL];
 
-        // Calculate the mandrel rotation angle based on the number of turns
-        const mandrelRotation = (i / (numPoints - 1)) * numTurns * 360;
+    for (let loop = 0; loop < numLoops; loop++) {
+        console.log(`Loop ${loop + 1} of ${numLoops}`);
 
+        cumulativeMandrelRotation += leadInDegrees;
         machine.move({
-            [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],                             // Carriage-axis movement
-            [ECoordinateAxes.MANDREL]: mandrelRotation,                                 // Mandrel-axis rotation
-            [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]),   // In/Out-axis delivery head in/out movement
-            [ECoordinateAxes.DELIVERY_HEAD]: tangent[1]                                 // Delivery head rotation
+            [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
+            [ECoordinateAxes.DELIVERY_HEAD]: 0,
+            [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[1][1]) + globalToolOffset + layerToolOffset
         });
-    }
-    machine.zeroAxes(geodesicPath[geodesicPath.length - 1][1]);
-}
 
-function calculateNormalVector(x: number, y: number, z: number, X: number[], Y: number[], Z: number[]): [number, number, number] {
-    const epsilon = 1e-7;
-
-    const interpolateValue = (axis: number[], y: number): number => {
-        if (y <= Y[0]) return axis[0];
-        if (y >= Y[Y.length - 1]) return axis[axis.length - 1];
-
-        for (let i = 0; i < Y.length - 1; i++) {
-            if (Y[i] <= y && y <= Y[i + 1]) {
-                const t = (y - Y[i]) / (Y[i + 1] - Y[i]);
-                return axis[i] + t * (axis[i + 1] - axis[i]);
-            }
+        // Main Geodesic Winding
+        for (let i = 1; i < geodesicPath.length - 1; i++) {
+            const tangent = calculateTangentVector(geodesicPath, i);
+            cumulativeMandrelRotation += (1 / geodesicPath.length) * numTurns * 360;
+            machine.move({
+                [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],
+                [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
+                [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]) + globalToolOffset + layerToolOffset,
+                [ECoordinateAxes.DELIVERY_HEAD]: -radToDeg(tangent[1])
+            });
         }
-        return NaN;
-    };
 
-    const interpolateDerivative = (axis: number[], y: number): number => {
-        return (interpolateValue(axis, y + epsilon) - interpolateValue(axis, y - epsilon)) / (2 * epsilon);
-    };
+        // Lead-Out Winding
+        cumulativeMandrelRotation += leadOutDegrees;
+        machine.move({
+            [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
+            [ECoordinateAxes.DELIVERY_HEAD]: 0
+        });
 
-    const dx_dy = interpolateDerivative(X, y);
-    const dy_dy = interpolateDerivative(Y, y);
-    const dz_dy = interpolateDerivative(Z, y);
+        // Reverse Geodesic Winding
+        for (let i = geodesicPath.length - 2; i >= 1; i--) {
+            const tangent = calculateTangentVector(geodesicPath, i);
+            cumulativeMandrelRotation += (1 / geodesicPath.length) * numTurns * 360;
+            machine.move({
+                [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],
+                [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
+                [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]) + globalToolOffset + layerToolOffset,
+                [ECoordinateAxes.DELIVERY_HEAD]: radToDeg(tangent[1])
+            });
+        }
+    }
 
-    const normalX = -dx_dy;
-    const normalY = dy_dy;
-    const normalZ = -dz_dy;
-    const magnitude = Math.sqrt(normalX ** 2 + normalY ** 2 + normalZ ** 2);
+    // Lead-Out Winding
+    cumulativeMandrelRotation += leadOutDegrees;
+    machine.move({
+        [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
+        [ECoordinateAxes.DELIVERY_HEAD]: 0
+    });
 
-    return [normalX / magnitude, normalY / magnitude, normalZ / magnitude];
+    // machine.zeroAxes(geodesicPath[geodesicPath.length - 1][1]);
 }
 
 function calculateTangentVector(path: number[][], i: number): [number, number, number] {
@@ -197,25 +231,6 @@ function calculateTangentVector(path: number[][], i: number): [number, number, n
 
     const magnitude = Math.sqrt(tangent[0] ** 2 + tangent[1] ** 2 + tangent[2] ** 2);
     return [tangent[0] / magnitude, tangent[1] / magnitude, tangent[2] / magnitude];
-}
-
-function calculateWindAngleVector(tangent: [number, number, number], normal: [number, number, number]): [number, number, number] {
-    const dotProduct = tangent[0] * normal[0] + tangent[1] * normal[1] + tangent[2] * normal[2];
-    const magnitudeTangent = Math.sqrt(tangent[0] ** 2 + tangent[1] ** 2 + tangent[2] ** 2);
-    const magnitudeNormal = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
-    const cosAngle = dotProduct / (magnitudeTangent * magnitudeNormal);
-    const angle = Math.acos(cosAngle);
-    const windAngleVector = [
-        tangent[1] * normal[2] - tangent[2] * normal[1],
-        tangent[2] * normal[0] - tangent[0] * normal[2],
-        tangent[0] * normal[1] - tangent[1] * normal[0]
-    ];
-    const windAngleMagnitude = Math.sqrt(windAngleVector[0] ** 2 + windAngleVector[1] ** 2 + windAngleVector[2] ** 2);
-    return [
-        (windAngleVector[0] / windAngleMagnitude) * angle,
-        (windAngleVector[1] / windAngleMagnitude) * angle,
-        (windAngleVector[2] / windAngleMagnitude) * angle
-    ];
 }
 
 /**
@@ -253,4 +268,114 @@ function revolve2DTo3D(polyline: [number, number][], numPoints: number): [number
 function exportCoordinates(X: number[], Y: number[], Z: number[]): void {
     const coordinates = { X, Y, Z };
     fs.writeFileSync('coordinates.json', JSON.stringify(coordinates, null, 2));
+}
+
+function verticesToCoordinates(vertices: THREE.Vector3[]): [number[], number[], number[]] {
+    const X: number[] = [];
+    const Y: number[] = [];
+    const Z: number[] = [];
+
+    vertices.forEach(vertex => {
+        X.push(vertex.x);
+        Y.push(vertex.y);
+        Z.push(vertex.z);
+    });
+
+    // Combine the coordinates into a single array for sorting
+    const combined = X.map((x, i) => ({ x, y: Y[i], z: Z[i] }));
+
+    // Sort by Y first, then by X
+    combined.sort((a, b) => a.y - b.y || a.x - b.x);
+
+    // Unpack the sorted coordinates back into separate arrays
+    const sortedX = combined.map(coord => coord.x);
+    const sortedY = combined.map(coord => coord.y);
+    const sortedZ = combined.map(coord => coord.z);
+
+    // Interpolation and reduction logic
+    const reduceFactor = 0.01; // Example factor to reduce the number of elements
+    const interpolate = (array: number[], factor: number): number[] => {
+        const newArray: number[] = [];
+        const step = 1 / factor;
+        for (let i = 0; i < array.length - 1; i += step) {
+            const lowerIndex = Math.floor(i);
+            const upperIndex = Math.ceil(i);
+            const t = i - lowerIndex;
+            const interpolatedValue = (1 - t) * array[lowerIndex] + t * array[upperIndex];
+            newArray.push(interpolatedValue);
+        }
+        return newArray;
+    };
+
+    const interpolatedX = interpolate(sortedX, reduceFactor);
+    const interpolatedY = interpolate(sortedY, reduceFactor);
+    const interpolatedZ = interpolate(sortedZ, reduceFactor);
+
+    return [interpolatedX, interpolatedY, interpolatedZ];
+}
+
+function extractPointsFromSTL(stlFilePath: string): THREE.Vector3[] {
+    const data = fs.readFileSync(stlFilePath);
+    const reader = new StlReader();
+    const stlData = reader.read(data.buffer);
+    const vertices: THREE.Vector3[] = [];
+
+    if (stlData && stlData.vertices) {
+        for (let i = 0; i < stlData.vertices.length; i += 3) {
+            vertices.push(new THREE.Vector3(stlData.vertices[i], stlData.vertices[i + 1], stlData.vertices[i + 2]));
+        }
+    }
+
+    return vertices;
+}
+
+function radToDeg(rad: number): number {
+    return rad * 180 / Math.PI;
+}
+
+function extractPointsFromDXF(filePath: string): [number, number][] {
+    const parser = new DxfParser();
+    const data = fs.readFileSync(filePath, 'utf8');
+    const dxf = parser.parseSync(data);
+    const points: [number, number][] = [];
+
+    dxf.entities.forEach((entity: any) => {
+        if (entity.type === 'LWPOLYLINE' || entity.type === 'POLYLINE') {
+            console.log('Polyline Entity:', entity);
+            entity.vertices.forEach((vertex: any) => {
+                points.push([vertex.x, vertex.y]);
+            });
+        } else if (entity.type === 'LINE') {
+            console.log('Line Entity:', entity);
+            points.push([entity.vertices[0].x, entity.vertices[0].y]);
+            points.push([entity.vertices[1].x, entity.vertices[1].y]);
+        } else if (entity.type === 'ARC') {
+            console.log('Arc Entity:', entity);
+            const { center, radius, startAngle, endAngle } = entity;
+            const angleIncrement = (endAngle - startAngle) / 10; // Adjust the number of points as needed
+            for (let angle = startAngle; angle <= endAngle; angle += angleIncrement) {
+                const x = center.x + radius * Math.cos(angle);
+                const y = center.y + radius * Math.sin(angle);
+                points.push([x, y]);
+            }
+        }
+    });
+
+    console.log('Unsorted points:', points);
+
+    // Sort points by y-coordinate, then by x-coordinate
+    points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+    console.log('Sorted points:', points);
+
+    // Remove entries with the same x value
+    const uniquePoints = points.filter((point, index) => {
+        return index === 0 || point[0] !== points[index - 1][0];
+    });
+
+    console.log('Filtered unique points:', uniquePoints);
+
+    console.log('Filtered unique points:', uniquePoints.slice(uniquePoints.length - 10, uniquePoints.length - 1));
+
+    return uniquePoints;
 }

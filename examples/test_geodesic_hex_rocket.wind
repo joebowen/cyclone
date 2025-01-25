@@ -2,46 +2,46 @@
     "layers": [
         {
             "windType": "geodesic",
-            "numPoints": 20,
+            "numPoints": 50,
+            "layerToolOffset": 10,
+            "lockDegrees": 720,
+            "leadInDegrees": 250,
+            "leadInMM": 30,
+            "leadOutDegrees": 250,
+            "leadOutMM": 30,
+            "numTurns": 1,
+            "numLoops": 36
+        },
+        {
+            "windType": "geodesic",
+            "numPoints": 50,
             "layerToolOffset": 15,
             "lockDegrees": 720,
             "leadInDegrees": 250,
             "leadInMM": 30,
             "leadOutDegrees": 250,
             "leadOutMM": 30,
-            "numTurns": 0.5,
-            "numLoops": 16
+            "numTurns": 1,
+            "numLoops": 36
         },
         {
             "windType": "geodesic",
-            "numPoints": 20,
-            "layerToolOffset": 25,
+            "numPoints": 50,
+            "layerToolOffset": 20,
             "lockDegrees": 720,
             "leadInDegrees": 250,
             "leadInMM": 30,
             "leadOutDegrees": 250,
             "leadOutMM": 30,
-            "numTurns": 0.5,
-            "numLoops": 16
-        },
-        {
-            "windType": "geodesic",
-            "numPoints": 20,
-            "layerToolOffset": 35,
-            "lockDegrees": 720,
-            "leadInDegrees": 250,
-            "leadInMM": 30,
-            "leadOutDegrees": 250,
-            "leadOutMM": 30,
-            "numTurns": 0.5,
-            "numLoops": 16
+            "numTurns": 1,
+            "numLoops": 36
         }
     ],
     "mandrelParameters": {
         "diameter": 200,
-        "globalToolOffset": 10,
-        "safeToolOffset": 30,
-        "stlFilePath": "examples/tank.stl"
+        "globalToolOffset": 5,
+        "safeToolOffset":5,
+        "stlFilePath": "examples/hex_rocket.stl"
     },
     "towParameters": {
         "width": 3,

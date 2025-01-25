@@ -3,3 +3,5 @@ dist
 gcode
 wind
 .idea
+*.mp4
+myenv

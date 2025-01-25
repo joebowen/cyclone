@@ -136,4 +136,8 @@ export class WinderMachine {
         this.mandrelDiameter = mandrelDiameter;
     }
 
+    public getLastPosition(): TCoordinateAxes {
+        return this.lastPosition;
+    }
+
 }

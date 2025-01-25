@@ -28,17 +28,20 @@
   "dependencies": {
     "@types/canvasjs": "^1.9.7",
     "canvas": "^2.11.2",
+    "dxf-parser": "^1.1.2",
     "node-canvas-webgl": "^0.3.0",
-    "serialport": "^10.3.0",
+    "serialport": "^10.5.0",
+    "stl-reader": "^3.0.1",
     "three": "^0.165.0",
     "yargs": "^17.3.1"
   },
   "devDependencies": {
+    "@jscad/stl-deserializer": "^2.1.27",
     "@types/three": "^0.165.0",
     "@types/yargs": "^17.0.8",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
-    "electron": "^17.0.1",
+    "electron": "^17.4.11",
     "eslint": "^7.32.0",
     "typescript": "^4.5.5"
   }

@@ -40,7 +40,10 @@ export function planHelicalLayer(machine: WinderMachine, layerParameters: ILayer
         return;
     }
 
+    let mandrelPositionDegrees = machine.getLastPosition()[ECoordinateAxes.MANDREL];
+
     if (typeof layerParameters.parameters.skipInitialNearLock === 'undefined' || !layerParameters.parameters.skipInitialNearLock) {
+        mandrelPositionDegrees += lockDegrees
         machine.move({
             [ECoordinateAxes.CARRIAGE]: 0,
             [ECoordinateAxes.MANDREL]: lockDegrees,
@@ -51,7 +54,6 @@ export function planHelicalLayer(machine: WinderMachine, layerParameters: ILayer
         });
     }
 
-    let mandrelPositionDegrees = 0;
     for (let patternIndex = 0; patternIndex < numberOfPatterns; patternIndex++) {
         for (let inPatternIndex = 0; inPatternIndex < patternNumber; inPatternIndex++) {
             machine.insertComment(`\tPattern: ${patternIndex + 1}/${numberOfPatterns} Circuit: ${inPatternIndex + 1}/${patternNumber}`);
@@ -100,5 +102,5 @@ export function planHelicalLayer(machine: WinderMachine, layerParameters: ILayer
         [ECoordinateAxes.DELIVERY_HEAD]: 0,
     });
 
-    machine.zeroAxes(mandrelPositionDegrees);
+    // machine.zeroAxes(mandrelPositionDegrees);
 }

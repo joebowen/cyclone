@@ -21,24 +21,13 @@
             "leadInMM": 30,
             "leadOutDegrees": 90,
             "skipInitialNearLock": true
-        },
-        {
-            "windType": "helical",
-            "windAngle": 49,
-            "patternNumber": 2,
-            "skipIndex": 1,
-            "layerToolOffset": 15,
-            "lockDegrees": 720,
-            "leadInMM": 30,
-            "leadOutDegrees": 90,
-            "skipInitialNearLock": true
         }
     ],
     "mandrelParameters": {
         "diameter": 60,
-        "globalToolOffset": 70,
-        "safeToolOffset": 130,
-        "windLength": 1300
+        "globalToolOffset": 100,
+        "safeToolOffset": 30,
+        "windLength": 200
     },
     "towParameters": {
         "width": 3,
