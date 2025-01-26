@@ -1,0 +1,6 @@
+numpy
+matplotlib
+pyvista
+click
+pandas
+numpy-stl

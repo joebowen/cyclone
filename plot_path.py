@@ -219,7 +219,7 @@ def calculate_wind_angle_vector(tangent, normal):
     return wind_angle_vector
 
 # Function to compute data for a single frame
-def compute_frame_data(num, X, Y, Z, HEAD, step_size, gcode_texts):
+def compute_frame_data(num, X, Y, Z, HEAD, step_size, gcode_texts, stl_mesh, total_frames_with_extra):
     frame_index = min(num * step_size, len(X) - 1)
     angle = np.arctan2(Z[frame_index], X[frame_index]) - np.pi / 2
     cos_angle = np.cos(angle)
@@ -233,7 +233,16 @@ def compute_frame_data(num, X, Y, Z, HEAD, step_size, gcode_texts):
     end_index = frame_index + 1
     rotated_points = np.dot(rotation_matrix, np.array([X[start_index:end_index], Y[start_index:end_index], Z[start_index:end_index]]))
     X_rotated, Y_rotated, Z_rotated = rotated_points
-    return X_rotated, Y_rotated, Z_rotated, HEAD[frame_index], gcode_texts[frame_index]
+
+    # Apply rotation to STL mesh around the Y-axis
+    stl_rotation_matrix = np.array([
+        [np.cos(-angle), 0, np.sin(-angle)],
+        [0, 1, 0],
+        [-np.sin(-angle), 0, np.cos(-angle)]
+    ])
+    rotated_vectors = np.dot(stl_mesh.vectors.reshape(-1, 3), stl_rotation_matrix).reshape(stl_mesh.vectors.shape)
+
+    return X_rotated, Y_rotated, Z_rotated, HEAD[frame_index], gcode_texts[frame_index], rotated_vectors
 
 @click.command()
 @click.argument('input_files', nargs=-1)
@@ -262,19 +271,18 @@ def plot_path(input_files, max_angle_change, max_linear_change, fiber_width, out
 
     print(f'Debug: Length after decimation: {len(stl_mesh.vectors)}')
 
-    ax.add_collection3d(art3d.Poly3DCollection(stl_mesh.vectors, facecolors='grey', alpha=0.5, linewidth=0.005, edgecolors='grey'))
-    scale = stl_mesh.points.flatten()
-    ax.auto_scale_xyz(scale, scale, scale)
+    stl_collection_main = art3d.Poly3DCollection([], facecolors='grey', linewidth=0.005, edgecolors='grey', alpha=0.5)
+    stl_collection_top_down = art3d.Poly3DCollection([], facecolors='grey', linewidth=0.005, edgecolors='grey', alpha=0.5)
+    stl_collection_front_view = art3d.Poly3DCollection([], facecolors='grey', linewidth=0.005, edgecolors='grey', alpha=0.5)
+
+    ax.add_collection3d(stl_collection_main)
+    ax_top_down.add_collection3d(stl_collection_top_down)
+    ax_front_view.add_collection3d(stl_collection_front_view)
 
     ax_top_down.view_init(elev=90, azim=0)
     ax_top_down.set_title('Top Down View')
-    ax_top_down.add_collection3d(art3d.Poly3DCollection(stl_mesh.vectors, facecolors='grey', alpha=0.5, linewidth=0.005, edgecolors='grey'))
-    ax_top_down.auto_scale_xyz(scale, scale, scale)
-
     ax_front_view.view_init(elev=0, azim=90)
     ax_front_view.set_title('Front View')
-    ax_front_view.add_collection3d(art3d.Poly3DCollection(stl_mesh.vectors, facecolors='grey', alpha=0.5, linewidth=0.005, edgecolors='grey'))
-    ax_front_view.auto_scale_xyz(scale, scale, scale)
 
     for input_file in input_files:
         file_extension = os.path.splitext(input_file)[1].lower()
@@ -326,7 +334,14 @@ def plot_path(input_files, max_angle_change, max_linear_change, fiber_width, out
         total_frames_with_extra = total_frames + extra_frames
 
         def update(num, line, arrow, line_top_down, arrow_top_down, line_front_view, arrow_front_view, text):
-            X_rotated, Y_rotated, Z_rotated, angle, gcode_text = compute_frame_data(num, X, Y, Z, HEAD, step_size, gcode_texts)
+            X_rotated, Y_rotated, Z_rotated, angle, gcode_text, rotated_vectors = compute_frame_data(num, X, Y, Z, HEAD, step_size, gcode_texts, stl_mesh, total_frames_with_extra)
+            
+            # Update the STL mesh display for each axis
+            stl_collection_main.set_verts(rotated_vectors)
+            stl_collection_top_down.set_verts(rotated_vectors)
+            stl_collection_front_view.set_verts(rotated_vectors)
+
+            # Update other plot elements as needed
             line.set_data(X_rotated, Y_rotated)
             line.set_3d_properties(Z_rotated)
             line_top_down.set_data(X_rotated, Y_rotated)
@@ -339,9 +354,9 @@ def plot_path(input_files, max_angle_change, max_linear_change, fiber_width, out
             arrow.set_segments([[[X_rotated[-1], Y_rotated[-1], Z_rotated[-1]],
                                 [X_rotated[-1] + dx, Y_rotated[-1] + dy, Z_rotated[-1] + dz]]])
             arrow_top_down.set_segments([[[X_rotated[-1], Y_rotated[-1], Z_rotated[-1]],
-                                        [X_rotated[-1] + dx, Y_rotated[-1] + dy, Z_rotated[-1] + dz]]])
+                                [X_rotated[-1] + dx, Y_rotated[-1] + dy, Z_rotated[-1] + dz]]])
             arrow_front_view.set_segments([[[X_rotated[-1], Y_rotated[-1], Z_rotated[-1]],
-                                        [X_rotated[-1] + dx, Y_rotated[-1] + dy, Z_rotated[-1] + dz]]])
+                                [X_rotated[-1] + dx, Y_rotated[-1] + dy, Z_rotated[-1] + dz]]])
             text.set_text(f'G-code: {gcode_text}')
             ax.view_init(elev=20., azim=num * 360 / total_frames_with_extra * 1)  # Rotate the camera around the plot
             ax_top_down.view_init(elev=90., azim=0)  # Top-down view

@@ -44,7 +44,7 @@ function calculateGeodesicPath(X: number[], Y: number[], Z: number[], numTurns: 
             dy = ds; // Simple step in height when radius is constant
         }
 
-        currentY += ds;
+        currentY += dy;
         if (isNaN(currentY)) {
             console.error(`currentY became NaN after incrementing by ds = ${ds}`);
             break;
@@ -76,11 +76,11 @@ function interpolateRadius(X: number[], Y: number[], Z: number[], y: number): nu
     }
 
     if (y <= Y[0]) {
-        return Y[0];
+        return Math.sqrt(X[0] ** 2 + Z[0] ** 2);
     }
 
     if (y >= Y[Y.length - 1]) {
-        return Y[Y.length - 1];
+        return Math.sqrt(X[Y.length - 1] ** 2 + Z[Y.length - 1] ** 2);
     }
 
     for (let i = 0; i < Y.length - 1; i++) {
@@ -161,7 +161,7 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
         machine.move({
             [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
             [ECoordinateAxes.DELIVERY_HEAD]: 0,
-            [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[1][1]) + globalToolOffset + layerToolOffset
+            [ECoordinateAxes.IN_OUT]: Math.sqrt(geodesicPath[1][0] ** 2 + geodesicPath[1][2] ** 2) + globalToolOffset + layerToolOffset
         });
 
         // Main Geodesic Winding
@@ -171,7 +171,7 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
             machine.move({
                 [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],
                 [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
-                [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]) + globalToolOffset + layerToolOffset,
+                [ECoordinateAxes.IN_OUT]: Math.sqrt(geodesicPath[i][0] ** 2 + geodesicPath[i][2] ** 2) + globalToolOffset + layerToolOffset,
                 [ECoordinateAxes.DELIVERY_HEAD]: -radToDeg(tangent[1])
             });
         }
@@ -190,7 +190,7 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
             machine.move({
                 [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],
                 [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
-                [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]) + globalToolOffset + layerToolOffset,
+                [ECoordinateAxes.IN_OUT]: Math.sqrt(geodesicPath[i][0] ** 2 + geodesicPath[i][2] ** 2) + globalToolOffset + layerToolOffset,
                 [ECoordinateAxes.DELIVERY_HEAD]: radToDeg(tangent[1])
             });
         }
@@ -293,7 +293,7 @@ function verticesToCoordinates(vertices: THREE.Vector3[]): [number[], number[], 
     const sortedZ = combined.map(coord => coord.z);
 
     // Interpolation and reduction logic
-    const reduceFactor = 0.01; // Example factor to reduce the number of elements
+    const reduceFactor = 0.9; // Example factor to reduce the number of elements
     const interpolate = (array: number[], factor: number): number[] => {
         const newArray: number[] = [];
         const step = 1 / factor;

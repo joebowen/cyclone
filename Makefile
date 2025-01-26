@@ -56,7 +56,7 @@ test_hex_rocket:
 	@echo "Building Hex Rocket test..."
 	mkdir -p build
 	npm run cli -- plan -o build/test_hex_rocket.nc examples/test_geodesic_hex_rocket.wind
-	python plot_path.py build/test_hex_rocket.nc --fiber-width 1 --total-time 240 --output build/video/hex_rocket.mp4 --stl-file examples/hex_rocket.stl
+	python plot_path.py build/test_hex_rocket.nc --fiber-width 1 --total-time 10 --output build/video/hex_rocket.mp4 --stl-file examples/hex_rocket.stl
 
 test_cnc_foam:
 	@echo "Building CNC Foam test..."
