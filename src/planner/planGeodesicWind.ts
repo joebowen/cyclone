@@ -161,7 +161,7 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
         machine.move({
             [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
             [ECoordinateAxes.DELIVERY_HEAD]: 0,
-            [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[1][1]) + globalToolOffset + layerToolOffset
+            [ECoordinateAxes.IN_OUT]: Math.sqrt(geodesicPath[1][0] ** 2 + geodesicPath[1][2] ** 2) + globalToolOffset + layerToolOffset
         });
 
         // Main Geodesic Winding
@@ -171,7 +171,7 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
             machine.move({
                 [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],
                 [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
-                [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]) + globalToolOffset + layerToolOffset,
+                [ECoordinateAxes.IN_OUT]: Math.sqrt(geodesicPath[i][0] ** 2 + geodesicPath[i][2] ** 2) + globalToolOffset + layerToolOffset,
                 [ECoordinateAxes.DELIVERY_HEAD]: -radToDeg(tangent[1])
             });
         }
@@ -190,7 +190,7 @@ export function planGeodesicWind(machine: WinderMachine, layerParameters: ILayer
             machine.move({
                 [ECoordinateAxes.CARRIAGE]: geodesicPath[i][1],
                 [ECoordinateAxes.MANDREL]: cumulativeMandrelRotation,
-                [ECoordinateAxes.IN_OUT]: interpolateRadius(X, Y, Z, geodesicPath[i][1]) + globalToolOffset + layerToolOffset,
+                [ECoordinateAxes.IN_OUT]: Math.sqrt(geodesicPath[i][0] ** 2 + geodesicPath[i][2] ** 2) + globalToolOffset + layerToolOffset,
                 [ECoordinateAxes.DELIVERY_HEAD]: radToDeg(tangent[1])
             });
         }
